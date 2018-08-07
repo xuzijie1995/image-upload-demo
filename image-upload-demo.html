@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>image-uploader</title>
+	<style type="text/css">
+		*{
+			margin:0;
+			padding:0;
+		}
+		body{
+			text-align: center;
+		}
+		.image-uploader{
+			box-sizing: border-box;
+			border:solid 1px #3c3c3c;
+			border-radius: 8px;
+			padding: 10px;
+			width: 400px;
+			height: 300px;
+			cursor: pointer;
+		}
+		.image-uploader .image-uploader-box{
+			width: 100%;
+			height: 100%;
+			border:dashed 1px #3c3c3c;
+			border-radius: 8px;
+			box-sizing: border-box;
+		}
+		.image-uploader .image-uploader-box.active{
+			border-color:#C9211D!important;
+		}
+		.image-uploader .image-uploader-box.empty:after{
+			display:inline-block;
+			vertical-align: middle;
+			content: " ";
+			height: 100%;
+		}
+		.image-uploader .image-uploader-box input{
+			display: none;
+		}
+		.image-uploader .image-uploader-box.empty .image-uploader-box-content{
+			display:inline-block;
+			vertical-align: middle;
+		}
+		.image-uploader .image-uploader-box .image-uploader-box-content{
+			display:none;
+		}
+		.image-uploader .image-uploader-box .image-uploader-box-content>span{
+			display: block;
+			color:#3c3c3c;
+		}
+
+		.image-uploader .image-uploader-box.empty .image-uploader-box-show{
+			display:none;
+		}
+		.image-uploader .image-uploader-box .image-uploader-box-show{
+			width: 100%;
+			height: 100%;
+			font-size: 0;
+		}
+		.image-uploader .image-uploader-box .image-uploader-box-show:after{
+			display:inline-block;
+			vertical-align: middle;
+			content: " ";
+			height: 100%;
+		}
+		.image-uploader .image-uploader-box .image-uploader-box-show>img{
+			max-width: 100%;
+			max-height: 100%;
+			display:inline-block;
+			vertical-align: middle;
+		}
+	</style>
+</head>
+<body>
+	<div class="image-uploader" id="image-uploader">
+		<div class="image-uploader-box empty">
+			<div class="image-uploader-box-content">
+				<img src="images/camera.png" alt="选择图片" disabled>
+				<span disabled>上传图片</span>
+			</div>
+			<div class="image-uploader-box-show">
+				<img>
+			</div>
+			<input type="file" name="image-uploader" onchange="imageUploaderListen()">
+		</div>
+	</div>
+</body>
+<script>
+function ajax(obj){
+	var initXmlhttp=function(){
+		if (window.XMLHttpRequest){
+			initXmlhttp = function(){
+				return new XMLHttpRequest();
+			}
+			return new XMLHttpRequest();
+		}else if(window.ActiveXObject){
+			initXmlhttp = function(){
+				return new ActiveXObject("Microsoft.XMLHTTP");
+			}
+			return new ActiveXObject("Microsoft.XMLHTTP");
+		}else{
+			alert('Your browser does not support XMLHTTP.')
+			return false;
+		}
+	}
+	var xmlhttp = initXmlhttp();
+	if(xmlhttp!=null){
+		xmlhttp.onreadystatechange=state_Change;
+		xmlhttp.open(obj.type.toUpperCase(),obj.url,obj.async);
+		xmlhttp.setRequestHeader('Content-Type',obj.contentType);
+		xmlhttp.send(obj.data);//发送请求
+	}else{
+		alert("Your browser does not support XMLHTTP.");
+	}
+	function state_Change(){
+		if(xmlhttp.readyState==4){
+			if(xmlhttp.status==200){
+				obj.success(xmlhttp.responseText);
+			}else{
+				obj.error(xmlhttp.responseText);
+			}
+		}
+	}
+}
+function check(){
+	if (window.File && window.FileReader && window.FileList && window.Blob) {
+		return true;
+	} else {
+		return false;
+	}
+}
+function addEventHandler(target,type,fn){
+	if(window.addEventListener){
+		addEventHandler=function(target,type,fn){
+			target.addEventListener(type,fn);
+		}
+		return addEventHandler(target,type,fn);
+	}else{
+		addEventHandler=function(target,type,fn){
+			target.attachEvent("on"+type,fn);
+		}
+		return addEventHandler(target,type,fn);
+	}
+}
+function removeEventHandler(target,type,fn){
+	if(window.addEventListener){
+		removeEventHandler=function(target,type,fn){
+			target.removeEventListener(type,fn);
+		}
+		return removeEventHandler(target,type,fn);
+	}else{
+		removeEventHandler=function(target,type,fn){
+			target.detachEvent("on"+type,fn);
+		}
+		return removeEventHandler(target,type,fn);
+	}
+}
+function initReader(file){
+	var reader = new FileReader();
+	reader.readAsDataURL(file); // 读取文件
+	reader.onload = function(arg) {
+		var form_data = new FormData();
+		form_data.append("file",arg.target.result);
+		var obj={
+			type:'POST',
+			url:'',
+			async:true,
+			contentType:false,
+			data:form_data,
+			success:function(e){
+				el.classList.remove("empty");
+				el.querySelector("div.image-uploader-box-show img").setAttribute("src",arg.target.result);
+			},
+			error:function(e){
+				alert('ajax error');
+			}
+		}
+		el.classList.remove("empty");
+		el.querySelector("div.image-uploader-box-show img").setAttribute("src",arg.target.result);
+		//ajax(obj);
+	}
+}
+function initBlob(file){
+	var blob = new Blob([file]), // 文件转化成二进制文件
+    url = URL.createObjectURL(blob); //转化成url
+	el.classList.remove("empty");
+	var imgEl = el.querySelector("div.image-uploader-box-show img");
+	imgEl.setAttribute("src",url);
+    if(Object.prototype.toString.call(imgEl.onload)!="[object Function]"){
+    	imgEl.onload = function(e) {
+	        URL.revokeObjectURL(this.src);
+	    }
+    }
+}
+function imageUploaderListen(){
+	var file = window.event.target.files[0];
+	if (!file&&!file.type.toLowerCase().match(/image.(jpg|jpeg|gif|png)/)) {
+		return false;
+	}
+	initBlob(file);
+	//initReader(file);
+}
+var el = document.getElementById("image-uploader").querySelector(".image-uploader-box");
+var imagesType = /image.(jpg|jpeg|gif|png)/;
+addEventHandler(el,'click',function(){
+	el.querySelector("input[name='image-uploader']").click();
+});
+addEventHandler(el,'dragleave',function(){
+	window.event.stopPropagation();
+	window.event.preventDefault();
+	el.classList.remove('active');
+});
+addEventHandler(el,'dragover',function(){
+	window.event.stopPropagation();
+	window.event.preventDefault();
+	el.classList.add('active');
+	window.event.dataTransfer.dropEffect = 'copy';
+});
+addEventHandler(el,'drop',function(){
+	window.event.stopPropagation();
+	window.event.preventDefault();
+	el.classList.remove('active');
+	var files = window.event.dataTransfer.files;
+	var output = [];
+	if(!files&&files.length==0){
+		return false
+	}else{
+		for (var i = 0, f; f = files[i]; i++) {
+			if(f.type.toLowerCase().match(imagesType)){
+				initReader(f);
+				return true;
+			}
+		}
+	}
+});
+</script>
+</html>
